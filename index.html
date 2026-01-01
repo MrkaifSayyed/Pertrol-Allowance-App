@@ -76,7 +76,7 @@
         
         #receipt-box {
             background: white;
-            padding: 0;
+            padding: 10;
             border: 1px solid #e5e7eb;
             position: relative;
             overflow: hidden;
@@ -153,8 +153,8 @@
         <h2>New Reimbursement Claim</h2>
 
         <div class="form-group">
-            <label>Agent Name & Purpose</label>
-            <input type="text" id="purpose" placeholder="e.g. John Doe - Site Visit">
+            <label>Name & Purpose</label>
+            <!-- <input type="text" id="purpose" placeholder="e.g. John Doe - Site Visit"> -->
         </div>
 
         <div class="form-group">
@@ -182,7 +182,7 @@
 
     <!-- RECEIPT SCREEN (Hidden initially) -->
     <div id="result-view">
-        <div class="card" style="padding:0; overflow:hidden;">
+        <div class="card" style="padding:5; overflow:hidden;">
             
             <!-- This Div is captured as Image -->
             <div id="receipt-box">
@@ -265,7 +265,7 @@
         </div>
 
         <button class="btn btn-success" onclick="shareReceipt()">
-            <span>📲 Share Official Receipt</span>
+            <span>Share Official Receipt</span>
         </button>
         
         <button class="btn btn-ghost" onclick="location.reload()">
