@@ -3,16 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <!-- FORCE FRESH CONTENT (Cache Busting) -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+
     <title>Field Agent Claim</title>
-    <!-- HTML2Canvas for Image Generation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    
     <style>
         :root {
-            --primary: #111827; /* Professional Black/Dark Gray */
-            --accent: #2563eb; /* Corporate Blue */
+            --primary: #111827; 
+            --accent: #2563eb; 
             --bg: #f3f4f6;
             --paper: #ffffff;
-            --text-sub: #6b7280;
+            --danger: #ef4444;
         }
         
         body {
@@ -21,390 +27,342 @@
             margin: 0;
             padding: 16px;
             color: #1f2937;
-            -webkit-user-select: none; /* Prevent text selection */
+            -webkit-user-select: none;
         }
 
-        /* --- 1. GPS LOCK SCREEN (The Gatekeeper) --- */
-        #gps-lock-screen {
+        /* --- OVERLAYS (GPS & INTERNET) --- */
+        .overlay-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: #ffffff; z-index: 9999;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             text-align: center; padding: 30px; box-sizing: border-box;
         }
-        .lock-icon { font-size: 60px; margin-bottom: 20px; animation: pulse 2s infinite; }
-        .lock-title { font-size: 1.5rem; font-weight: 800; color: var(--primary); margin-bottom: 10px; }
-        .lock-desc { color: var(--text-sub); margin-bottom: 30px; font-size: 0.95rem; line-height: 1.5; }
-        
-        @keyframes pulse { 0% { opacity: 0.5; transform: scale(0.95); } 50% { opacity: 1; transform: scale(1.05); } 100% { opacity: 0.5; transform: scale(0.95); } }
+        .icon-lg { font-size: 50px; margin-bottom: 20px; }
+        .title-lg { font-size: 1.4rem; font-weight: 800; color: var(--primary); margin-bottom: 10px; }
+        .desc-lg { color: #6b7280; margin-bottom: 30px; font-size: 0.95rem; }
 
-        /* --- 2. MAIN APP CONTAINER --- */
-        #main-app { display: none; } /* Hidden by default */
+        /* Hide overlays by default, JS will toggle them */
+        #gps-screen { display: none; }
+        #net-screen { display: none; } 
+
+        /* --- MAIN APP --- */
+        #main-app { display: none; }
         
         .card {
             background: var(--paper);
             padding: 24px;
             border-radius: 16px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
             margin-bottom: 20px;
         }
 
-        h2 { margin: 0 0 20px; color: var(--primary); text-align: center; font-size: 1.25rem; letter-spacing: -0.5px; }
+        h2 { margin: 0 0 20px; color: var(--primary); text-align: center; font-size: 1.2rem; }
 
         /* Form Inputs */
         .form-group { margin-bottom: 15px; }
-        label { display: block; font-size: 0.85rem; font-weight: 700; color: #374151; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+        label { display: block; font-size: 0.8rem; font-weight: 700; color: #374151; margin-bottom: 6px; text-transform: uppercase; }
         input, select {
             width: 100%; padding: 14px; border: 1px solid #d1d5db; border-radius: 8px;
-            font-size: 1rem; background: #fff; box-sizing: border-box; transition: border 0.2s;
+            font-size: 1rem; background: #fff; box-sizing: border-box;
         }
-        input:focus, select:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
+        
+        /* Read Only Input Style */
+        input:read-only { background-color: #f3f4f6; color: #6b7280; cursor: not-allowed; border-color: #e5e7eb; }
+        
+        /* Disabled Option Style */
+        option:disabled { color: #d1d5db; }
+
+        /* Validation Msg */
+        .hint { font-size: 0.75rem; color: #dc2626; margin-top: 4px; display: none; }
 
         /* Buttons */
         .btn {
             width: 100%; padding: 16px; border: none; border-radius: 10px;
-            font-size: 1rem; font-weight: 700; cursor: pointer;
-            display: flex; align-items: center; justify-content: center; gap: 8px;
-            margin-top: 10px; transition: transform 0.1s;
+            font-size: 1rem; font-weight: 700; cursor: pointer; margin-top: 10px;
         }
-        .btn:active { transform: scale(0.98); }
-        .btn-primary { background: var(--accent); color: white; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2); }
-        .btn-success { background: #059669; color: white; box-shadow: 0 4px 6px rgba(5, 150, 105, 0.2); }
-        .btn-ghost { background: transparent; color: #6b7280; margin-top: 20px; font-weight: normal; }
+        .btn-primary { background: var(--accent); color: white; }
+        .btn-share { background: #059669; color: white; margin-bottom: 15px;}
+        .btn-ghost { background: transparent; color: #6b7280; font-weight: normal; }
 
-        /* --- 3. PROFESSIONAL RECEIPT DESIGN --- */
+        /* --- RECEIPT DESIGN --- */
         #result-view { display: none; }
         
+        /* This is the container that adds PADDING to the image */
+        #capture-container {
+            background: #ffffff;
+            padding: 40px; /* This creates the white border in the image */
+            width: 100%;
+            box-sizing: border-box;
+        }
+
         #receipt-box {
-            background: white;
-            padding: 0;
-            border: 1px solid #e5e7eb;
-            position: relative;
-            overflow: hidden;
-            font-family: 'Courier New', Courier, monospace; /* Monospace for financial look */
+            border: 2px solid #000;
+            font-family: 'Courier New', Courier, monospace;
             color: #000;
+            position: relative;
         }
         
-        /* Receipt Header */
-        .r-header {
-            background: #1f2937; color: white; padding: 20px;
-            display: flex; justify-content: space-between; align-items: flex-start;
-        }
-        .r-title { font-weight: 800; font-size: 1.1rem; font-family: sans-serif; letter-spacing: 1px; }
-        .r-id { font-size: 0.75rem; color: #9ca3af; margin-top: 4px; }
-        .r-date { text-align: right; font-size: 0.8rem; line-height: 1.4; }
-
-        /* Receipt Body */
-        .r-body { padding: 20px; position: relative; }
+        .r-header { background: #000; color: #fff; padding: 15px; display: flex; justify-content: space-between; }
+        .r-body { padding: 20px; }
+        .r-row { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 0.9rem; }
+        .r-total { border-top: 2px dashed #000; padding-top: 15px; margin-top: 15px; font-weight: 900; font-size: 1.4rem; display: flex; justify-content: space-between; }
         
-        /* GPS Watermark */
-        .gps-stamp {
+        .watermark {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-30deg);
-            font-size: 2.5rem; font-weight: 900; color: rgba(37, 99, 235, 0.08);
-            border: 4px solid rgba(37, 99, 235, 0.08); padding: 10px 20px; border-radius: 8px;
-            pointer-events: none; white-space: nowrap;
+            font-size: 3rem; opacity: 0.1; font-weight: 900; pointer-events: none; border: 5px solid #000; padding: 10px;
         }
-
-        .r-section { margin-bottom: 15px; border-bottom: 1px dashed #d1d5db; padding-bottom: 15px; }
-        .r-section:last-child { border-bottom: none; }
-        
-        .r-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem; }
-        .r-label { color: #4b5563; font-weight: 600; }
-        .r-val { font-weight: 700; text-align: right; }
-        
-        .r-sub { font-size: 0.75rem; color: #6b7280; display: block; margin-top: -4px; text-align: right; font-style: italic;}
-
-        .r-total-box {
-            background: #f9fafb; border-top: 2px solid #000; padding: 15px 20px;
-            display: flex; justify-content: space-between; align-items: center;
-        }
-        .r-total-label { font-family: sans-serif; font-weight: 800; font-size: 1.1rem; }
-        .r-total-val { font-family: sans-serif; font-weight: 900; font-size: 1.5rem; color: var(--accent); }
-
-        .r-footer {
-            text-align: center; font-size: 0.7rem; color: #9ca3af; padding: 10px;
-            background: #f9fafb; border-top: 1px solid #e5e7eb;
-            font-family: sans-serif;
-        }
-
     </style>
 </head>
 <body>
 
-<!-- === GPS LOCK SCREEN === -->
-<div id="gps-lock-screen">
-    <div class="lock-icon">📡</div>
-    <div class="lock-title">Location Required</div>
-    <div class="lock-desc">
-        To generate a valid claim receipt, we must verify your current field location via GPS.
-    </div>
-    <button class="btn btn-primary" onclick="initGPS()">Enable GPS Access</button>
-    <div style="margin-top:20px; font-size:0.75rem; color:#ef4444;" id="gps-error-msg"></div>
+<!-- 1. CUSTOM INTERNET WARNING -->
+<div id="net-screen" class="overlay-screen" style="z-index: 10000;">
+    <div class="icon-lg">📶</div>
+    <div class="title-lg">No Internet Connection</div>
+    <div class="desc-lg">This app requires an active network connection to verify latest rates and submit claims.</div>
+    <button class="btn btn-primary" onclick="checkNet()">Retry Connection</button>
 </div>
 
-<!-- === MAIN APPLICATION === -->
+<!-- 2. GPS LOCK SCREEN -->
+<div id="gps-screen" class="overlay-screen">
+    <div class="icon-lg">📡</div>
+    <div class="title-lg">Location Required</div>
+    <div class="desc-lg">We need your GPS location to verify this site visit.</div>
+    <button class="btn btn-primary" onclick="initGPS()">Enable GPS</button>
+    <div id="gps-err" style="color:red; font-size:0.8rem; margin-top:10px;"></div>
+</div>
+
+<!-- 3. MAIN APP -->
 <div id="main-app">
     
-    <!-- INPUT SCREEN -->
+    <!-- INPUT FORM -->
     <div class="card" id="input-view">
-        <div style="display:flex; align-items:center; justify-content:center; gap:6px; margin-bottom:20px; color:#059669; font-weight:600; font-size:0.9rem;">
-            <span>✅</span> GPS Verified & Secured
-        </div>
-
-        <h2>New Reimbursement Claim</h2>
-
-        <div class="form-group">
-            <label>Agent Name & Purpose</label>
-            <input type="text" id="purpose" placeholder="e.g. John Doe - Site Visit">
+        <div style="text-align:center; color:#059669; font-weight:bold; font-size:0.8rem; margin-bottom:15px;">
+            ✅ SYSTEM LIVE • UPDATED
         </div>
 
         <div class="form-group">
-            <label>Vehicle Class</label>
-            <select id="vehicle">
-                <option value="bike">Two Wheeler (Bike)</option>
-                <option value="car">Four Wheeler (Car)</option>
-            </select>
-        </div>
-
-        <div class="form-group">
-            <label>Current Fuel Price (₹/L)</label>
-            <input type="number" id="price" value="105.00" step="0.01">
+            <label>Purpose / Agent Name</label>
+            <input type="text" id="purpose" placeholder="e.g. Doc Collection">
         </div>
 
         <div class="form-group">
             <label>Total Return Distance (KM)</label>
-            <input type="number" id="dist" placeholder="0" inputmode="decimal">
+            <input type="number" id="dist" placeholder="0" oninput="validateVehicleOption()">
         </div>
 
-        <button class="btn btn-primary" onclick="generateClaim()">
-            <span>Calculate Claim</span>
-        </button>
+        <div class="form-group">
+            <label>Vehicle Type</label>
+            <select id="vehicle">
+                <option value="bike">Bike (Two Wheeler)</option>
+                <option value="car" disabled>Car (Four Wheeler)</option>
+            </select>
+            <!-- Warning if car is disabled -->
+            <div id="car-hint" class="hint">⚠️ Car allowed only for distance > <span id="min-km-txt"></span> KM</div>
+        </div>
+
+        <div class="form-group">
+            <label>Petrol Price (Today)</label>
+            <!-- READ ONLY: Controlled by Config -->
+            <input type="number" id="price" readonly>
+        </div>
+
+        <button class="btn btn-primary" onclick="calculate()">Calculate</button>
     </div>
 
-    <!-- RECEIPT SCREEN (Hidden initially) -->
+    <!-- RESULT / RECEIPT -->
     <div id="result-view">
-        <div class="card" style="padding:0; overflow:hidden;">
+        <div style="overflow:hidden; border-radius:10px; box-shadow:0 4px 15px rgba(0,0,0,0.1); margin-bottom:20px;">
             
-            <!-- This Div is captured as Image -->
-            <div id="receipt-box">
-                <div class="r-header">
-                    <div>
-                        <div class="r-title">FIELD EXPENSE</div>
-                        <div class="r-id" id="r-id">ID: ...</div>
-                    </div>
-                    <div class="r-date" id="r-datetime">
-                        DATE<br>TIME
-                    </div>
-                </div>
-
-                <div class="r-body">
-                    <div class="gps-stamp">GPS VERIFIED</div>
-
-                    <div class="r-section">
-                        <div class="r-row">
-                            <span class="r-label">Agent / Purpose</span>
-                            <span class="r-val" id="r-agent">...</span>
-                        </div>
-                        <div class="r-row">
-                            <span class="r-label">Location Coords</span>
-                            <span class="r-val" id="r-coords" style="font-size:0.75rem;">...</span>
-                        </div>
-                        <div class="r-row">
-                            <span class="r-label">Vehicle Class</span>
-                            <span class="r-val" id="r-vehicle">...</span>
-                        </div>
+            <!-- CAPTURE CONTAINER (Adds Padding) -->
+            <div id="capture-container">
+                <div id="receipt-box">
+                    <div class="watermark">GPS LOCKED</div>
+                    
+                    <div class="r-header">
+                        <div><strong>EXPENSE CLAIM</strong><br><small id="r-id">ID: --</small></div>
+                        <div style="text-align:right"><small id="r-date">DATE</small></div>
                     </div>
 
-                    <div class="r-section">
-                        <div class="r-row">
-                            <span class="r-label">Input Distance</span>
-                            <span class="r-val" id="r-dist-in">0 km</span>
-                        </div>
-                        <div class="r-row">
-                            <span class="r-label">Company Buffer</span>
-                            <span class="r-val">+10 km</span>
-                        </div>
-                        <div class="r-row" style="color:var(--primary); font-weight:bold;">
-                            <span class="r-label">Total Billable</span>
-                            <span class="r-val" id="r-dist-total">0 km</span>
-                        </div>
-                    </div>
-
-                    <div class="r-section">
-                        <!-- Fuel Line Item -->
-                        <div class="r-row">
-                            <span class="r-label">Fuel Cost</span>
-                            <span class="r-val" id="r-cost-fuel">₹0.00</span>
-                        </div>
-                        <span class="r-sub" id="r-rate-fuel">@ ₹100.00/L ÷ 45 km/l</span>
+                    <div class="r-body">
+                        <div class="r-row"><span>Agent:</span><strong id="r-agent">--</strong></div>
+                        <div class="r-row"><span>Vehicle:</span><span id="r-veh">--</span></div>
+                        <div class="r-row"><span>GPS:</span><span id="r-gps" style="font-size:0.7rem">--</span></div>
+                        <hr style="border-top:1px dashed #ccc; margin:15px 0;">
                         
-                        <!-- Spacing -->
-                        <div style="height:10px;"></div>
+                        <div class="r-row"><span>Distance Input:</span><span id="r-d-in">0</span></div>
+                        <div class="r-row"><span>Buffer Added:</span><span id="r-buff">0</span></div>
+                        <div class="r-row"><span><strong>Billable Dist:</strong></span><strong id="r-d-bill">0</strong></div>
+                        
+                        <div style="margin-top:15px"></div>
+                        <div class="r-row"><span>Fuel Cost:</span><span id="r-c-fuel">0</span></div>
+                        <div style="text-align:right; font-size:0.7rem; color:#666; margin-top:-8px;" id="r-txt-fuel">rate info</div>
 
-                        <!-- Maintenance Line Item -->
-                        <div class="r-row">
-                            <span class="r-label">Maintenance</span>
-                            <span class="r-val" id="r-cost-wear">₹0.00</span>
+                        <div class="r-row" style="margin-top:10px"><span>Maintenance:</span><span id="r-c-wear">0</span></div>
+                        <div style="text-align:right; font-size:0.7rem; color:#666; margin-top:-8px;" id="r-txt-wear">rate info</div>
+
+                        <div class="r-total">
+                            <span>TOTAL:</span>
+                            <span id="r-total">₹0.00</span>
                         </div>
-                        <span class="r-sub" id="r-rate-wear">@ ₹1.50 per km (Wear & Tear)</span>
                     </div>
-
-                </div>
-
-                <div class="r-total-box">
-                    <span class="r-total-label">TOTAL CLAIM</span>
-                    <span class="r-total-val" id="r-total">₹0.00</span>
-                </div>
-
-                <div class="r-footer">
-                    Digital Receipt • System Generated • GPS Locked<br>
-                    Valid for reimbursement only with proof of visit.
                 </div>
             </div>
-            <!-- End Receipt Box -->
+            <!-- END CAPTURE -->
 
         </div>
 
-        <button class="btn btn-success" onclick="shareReceipt()">
-            <span>📲 Share Official Receipt</span>
-        </button>
-        
-        <button class="btn btn-ghost" onclick="location.reload()">
-            Start New Claim
-        </button>
+        <button class="btn btn-share" onclick="shareImage()">📲 Share Official Receipt</button>
+        <button class="btn btn-ghost" onclick="location.reload()">Start New Claim</button>
     </div>
 
 </div>
 
 <script>
-    // --- APP STATE ---
+    // ==========================================================
+    // ⚙️ BACKEND CONFIGURATION (EDIT THIS TO UPDATE APP)
+    // ==========================================================
+    const CONFIG = {
+        fuelPrice: 104.50,       // Fixed Fuel Price (User cannot edit)
+        wearBike: 1.50,          // Maintenance per KM for Bike
+        wearCar: 4.00,           // Maintenance per KM for Car
+        
+        minKmForCar: 30,         // Car option disabled if KM is less than this
+        
+        bufferBike: 10,          // Extra KM added for Bike
+        bufferCar: 20            // Extra KM added for Car
+    };
+    // ==========================================================
+
     let gpsCoords = null;
-    let gpsLocked = false;
 
-    // 1. STRICT INITIALIZATION
-    window.onload = initGPS;
+    // 1. INITIALIZATION & CHECKS
+    window.onload = function() {
+        // Set UI values from Config
+        document.getElementById('price').value = CONFIG.fuelPrice.toFixed(2);
+        document.getElementById('min-km-txt').innerText = CONFIG.minKmForCar;
+        
+        checkNet(); // Check Internet
+    };
 
+    // 2. INTERNET CHECKER
+    function checkNet() {
+        if(navigator.onLine) {
+            document.getElementById('net-screen').style.display = 'none';
+            initGPS(); // Proceed to GPS check
+        } else {
+            document.getElementById('net-screen').style.display = 'flex';
+        }
+    }
+    // Listen for connection changes
+    window.addEventListener('offline', () => document.getElementById('net-screen').style.display = 'flex');
+    window.addEventListener('online', () => document.getElementById('net-screen').style.display = 'none');
+
+    // 3. GPS CHECKER
     function initGPS() {
-        const errorMsg = document.getElementById("gps-error-msg");
-        errorMsg.innerText = "Locating satellite...";
-
+        document.getElementById('gps-screen').style.display = 'flex';
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    // Success
-                    gpsCoords = position.coords.latitude.toFixed(6) + ", " + position.coords.longitude.toFixed(6);
-                    gpsLocked = true;
-                    
-                    // Unlock App
-                    document.getElementById("gps-lock-screen").style.display = "none";
-                    document.getElementById("main-app").style.display = "block";
+                (pos) => {
+                    gpsCoords = pos.coords.latitude.toFixed(5) + ", " + pos.coords.longitude.toFixed(5);
+                    document.getElementById('gps-screen').style.display = 'none';
+                    document.getElementById('main-app').style.display = 'block';
                 },
-                (error) => {
-                    // Fail
-                    console.error(error);
-                    let msg = "GPS Error.";
-                    if (error.code === 1) msg = "Permission Denied. Go to Settings > Apps > Permissions.";
-                    if (error.code === 2) msg = "Signal lost. Go outside.";
-                    if (error.code === 3) msg = "Request timed out.";
-                    errorMsg.innerText = msg;
+                (err) => {
+                    document.getElementById('gps-err').innerText = "Permission Denied or Error. Please enable GPS.";
                 },
-                { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+                { enableHighAccuracy: true }
             );
         } else {
-            errorMsg.innerText = "Device does not support GPS.";
+            document.getElementById('gps-err').innerText = "GPS not supported.";
         }
     }
 
-    // 2. CALCULATION LOGIC
-    function generateClaim() {
-        if (!gpsLocked) {
-            alert("GPS Security Violation. Please restart app.");
-            return;
-        }
+    // 4. DYNAMIC CAR LOGIC
+    function validateVehicleOption() {
+        const dist = parseFloat(document.getElementById('dist').value) || 0;
+        const carOpt = document.querySelector('option[value="car"]');
+        const bikeOpt = document.querySelector('option[value="bike"]');
+        const select = document.getElementById('vehicle');
+        const hint = document.getElementById('car-hint');
 
-        const inputDist = parseFloat(document.getElementById("dist").value);
-        if (!inputDist || inputDist <= 0) {
-            alert("Please enter a valid distance.");
-            return;
+        if (dist < CONFIG.minKmForCar) {
+            // Disable Car
+            carOpt.disabled = true;
+            if(select.value === 'car') select.value = 'bike'; // Force bike
+            hint.style.display = 'block';
+        } else {
+            // Enable Car
+            carOpt.disabled = false;
+            hint.style.display = 'none';
         }
+    }
 
-        const purpose = document.getElementById("purpose").value || "General Field Work";
-        const vType = document.getElementById("vehicle").value;
-        const fuelPrice = parseFloat(document.getElementById("price").value) || 100;
+    // 5. CALCULATION
+    function calculate() {
+        const distIn = parseFloat(document.getElementById('dist').value);
+        if(!distIn || distIn <= 0) { alert("Enter valid distance"); return; }
         
-        // Config
-        const mileage = (vType === 'bike') ? 45 : 17;
-        const wearRate = (vType === 'bike') ? 1.50 : 4.00;
-        const buffer = 10;
+        const type = document.getElementById('vehicle').value;
+        const purpose = document.getElementById('purpose').value || "Field Visit";
         
-        // Math
-        const totalDist = inputDist + buffer;
-        const costFuel = (totalDist / mileage) * fuelPrice;
+        // --- LOGIC FROM CONFIG ---
+        const mileage = (type === 'bike') ? 45 : 17;
+        const wearRate = (type === 'bike') ? CONFIG.wearBike : CONFIG.wearCar;
+        const buffer = (type === 'bike') ? CONFIG.bufferBike : CONFIG.bufferCar;
+        const price = CONFIG.fuelPrice;
+
+        const totalDist = distIn + buffer;
+        const costFuel = (totalDist / mileage) * price;
         const costWear = totalDist * wearRate;
-        const totalAmount = Math.round(costFuel + costWear);
+        const total = Math.round(costFuel + costWear);
 
-        // --- POPULATE RECEIPT --- //
-        
-        // 1. Header Details
-        const now = new Date();
-        document.getElementById("r-datetime").innerHTML = now.toLocaleDateString() + "<br>" + now.toLocaleTimeString();
-        
-        // Generate Random Receipt ID (e.g., CLM-X7Z-99)
-        const randID = "CLM-" + Math.random().toString(36).substr(2, 4).toUpperCase() + "-" + now.getDate();
-        document.getElementById("r-id").innerText = "REF: " + randID;
+        // --- FILL RECEIPT ---
+        document.getElementById('r-id').innerText = "ID: " + Date.now().toString().slice(-6);
+        document.getElementById('r-date').innerText = new Date().toLocaleString();
+        document.getElementById('r-agent').innerText = purpose;
+        document.getElementById('r-veh').innerText = (type==='bike') ? "Bike" : "Car";
+        document.getElementById('r-gps').innerText = gpsCoords;
 
-        // 2. Body Details
-        document.getElementById("r-agent").innerText = purpose;
-        document.getElementById("r-coords").innerText = gpsCoords;
-        document.getElementById("r-vehicle").innerText = (vType === 'bike' ? "Two Wheeler" : "Four Wheeler");
+        document.getElementById('r-d-in').innerText = distIn + " km";
+        document.getElementById('r-buff').innerText = "+ " + buffer + " km";
+        document.getElementById('r-d-bill').innerText = totalDist.toFixed(1) + " km";
 
-        // 3. Distance
-        document.getElementById("r-dist-in").innerText = inputDist + " km";
-        document.getElementById("r-dist-total").innerText = totalDist.toFixed(1) + " km";
+        document.getElementById('r-c-fuel').innerText = "₹" + costFuel.toFixed(2);
+        document.getElementById('r-txt-fuel').innerText = `@ ₹${price}/L ÷ ${mileage} km/l`;
 
-        // 4. Financials
-        document.getElementById("r-cost-fuel").innerText = "₹" + costFuel.toFixed(2);
-        document.getElementById("r-rate-fuel").innerText = `@ ₹${fuelPrice}/L ÷ ${mileage} km/l`;
+        document.getElementById('r-c-wear').innerText = "₹" + costWear.toFixed(2);
+        document.getElementById('r-txt-wear').innerText = `@ ₹${wearRate.toFixed(2)} / km`;
 
-        document.getElementById("r-cost-wear").innerText = "₹" + costWear.toFixed(2);
-        document.getElementById("r-rate-wear").innerText = `@ ₹${wearRate.toFixed(2)} per km (Wear & Tear)`;
+        document.getElementById('r-total').innerText = "₹" + total.toFixed(2);
 
-        // 5. Total
-        document.getElementById("r-total").innerText = "₹" + totalAmount.toFixed(2);
-
-        // SWITCH VIEW
-        document.getElementById("input-view").style.display = "none";
-        document.getElementById("result-view").style.display = "block";
-        window.scrollTo(0, 0);
+        // SHOW RESULT
+        document.getElementById('input-view').style.display = 'none';
+        document.getElementById('result-view').style.display = 'block';
+        window.scrollTo(0,0);
     }
 
-    // 3. SHARE LOGIC (Using the Java Bridge)
-    function shareReceipt() {
-        const btn = document.querySelector('.btn-success');
-        const originalText = btn.innerHTML;
+    // 6. SHARE IMAGE
+    function shareImage() {
+        const btn = document.querySelector('.btn-share');
         btn.innerText = "Processing...";
-
-        // Scale 3 for high definition
-        html2canvas(document.getElementById('receipt-box'), { scale: 3, useCORS: true }).then(canvas => {
-            const base64Data = canvas.toDataURL("image/png");
-            
-            if (window.AndroidShareHandler) {
-                // Native App Bridge
-                window.AndroidShareHandler.shareImage(base64Data);
-                btn.innerHTML = originalText;
+        
+        // Capture the CONTAINER (including the padding)
+        html2canvas(document.getElementById('capture-container'), {
+            scale: 2,
+            backgroundColor: "#ffffff" // Ensure white background for padding
+        }).then(canvas => {
+            const base64 = canvas.toDataURL("image/png");
+            if(window.AndroidShareHandler) {
+                window.AndroidShareHandler.shareImage(base64);
+                btn.innerText = "📲 Share Official Receipt";
             } else {
-                // Fallback (for browser testing)
-                console.log("Not in Android App. Showing image.");
-                const win = window.open();
-                win.document.write('<img src="' + base64Data + '" style="width:100%"/>');
-                btn.innerHTML = originalText;
+                console.log("Not Android. Open console to see Base64.");
+                alert("This feature works in the App.");
+                btn.innerText = "📲 Share Official Receipt";
             }
-        }).catch(err => {
-            alert("Error generating receipt.");
-            btn.innerHTML = originalText;
         });
     }
-
 </script>
-
 </body>
 </html>
