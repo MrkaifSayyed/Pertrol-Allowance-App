@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Agent Petrol Claim</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        :root { --primary: #2563eb; --bg: #f8fafc; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); margin: 0; padding: 15px; -webkit-user-select: none; }
+        
+        .card { background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        h2 { margin: 0 0 15px; color: var(--primary); text-align: center; }
+        label { display: block; margin: 12px 0 6px; font-weight: 600; color: #475569; }
+        input, select { width: 100%; padding: 14px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 16px; background: #fff; box-sizing: border-box; }
+        
+        .btn { width: 100%; padding: 16px; border: none; border-radius: 12px; font-size: 1rem; font-weight: bold; color: white; cursor: pointer; margin-top: 12px; }
+        .btn-calc { background: var(--primary); }
+        .btn-share { background: #059669; }
+        .btn-new { background: #e2e8f0; color: #333; }
+
+        #result-view { display: none; }
+        #receipt-box { background: white; padding: 20px; border: 1px solid #e2e8f0; position: relative; }
+        
+        /* Watermark */
+        #receipt-box::after {
+            content: "OFFICIAL CLAIM"; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg);
+            font-size: 3rem; color: rgba(0,0,0,0.03); font-weight: 900; pointer-events: none;
+        }
+
+        .row { display: flex; justify-content: space-between; margin-bottom: 8px; border-bottom: 1px dashed #f1f5f9; padding-bottom: 5px; }
+        .total-row { font-size: 1.5rem; font-weight: 800; color: var(--primary); border-top: 2px solid #000; padding-top: 10px; margin-top: 10px; display: flex; justify-content: space-between; }
+    </style>
+</head>
+<body>
+
+<!-- Input View -->
+<div class="card" id="input-view">
+    <h2>⛽ Petrol Reimbursement</h2>
+    
+    <label>Agent Name / Purpose</label>
+    <input type="text" id="purpose" placeholder="e.g. Rahul - Client Visit">
+
+    <label>Vehicle Type</label>
+    <select id="vehicle">
+        <option value="bike">Bike (45 km/l)</option>
+        <option value="car">Car (17 km/l)</option>
+    </select>
+
+    <label>Petrol Price (₹)</label>
+    <input type="number" id="price" value="106.30">
+
+    <label>Total Distance (KM)</label>
+    <input type="number" id="dist" placeholder="Enter KM" inputmode="decimal">
+
+    <button class="btn btn-calc" onclick="calculate()">Calculate Claim</button>
+</div>
+
+<!-- Result View -->
+<div id="result-view">
+    <div class="card">
+        <div id="receipt-box">
+            <div style="text-align:center; font-weight:900; margin-bottom:15px;">EXPENSE CLAIM RECEIPT</div>
+            <div class="row"><span>Date:</span> <span id="r-date"></span></div>
+            <div class="row"><span>Location:</span> <span id="r-gps" style="font-size:0.8rem">Testing Mode</span></div>
+            <div class="row"><span>Purpose:</span> <strong id="r-purp"></strong></div>
+            <div class="row" style="margin-top:10px"><span>Total Dist:</span> <strong id="r-dist-total"></strong></div>
+            <div class="total-row"><span>TOTAL:</span> <span id="r-total"></span></div>
+        </div>
+
+        <button class="btn btn-share" onclick="shareReceipt()">📲 Share via WhatsApp/Email</button>
+        <button class="btn btn-new" onclick="location.reload()">New Calculation</button>
+    </div>
+</div>
+
+<script>
+    // --- TESTING MODE ENABLED (No GPS Check) ---
+    
+    function calculate() {
+        const d = parseFloat(document.getElementById('dist').value) || 0;
+        if(d <= 0) { alert("Enter distance"); return; }
+        
+        const type = document.getElementById('vehicle').value;
+        const price = parseFloat(document.getElementById('price').value);
+        const mileage = (type === 'bike') ? 45 : 17;
+        const wearRate = (type === 'bike') ? 1.5 : 4.0;
+        const totalKm = d + 10; // Buffer
+        const total = Math.round(((totalKm / mileage) * price) + (totalKm * wearRate));
+
+        document.getElementById('r-date').innerText = new Date().toLocaleString();
+        document.getElementById('r-purp').innerText = document.getElementById('purpose').value;
+        document.getElementById('r-dist-total').innerText = totalKm + " km";
+        document.getElementById('r-total').innerText = "₹" + total;
+
+        document.getElementById('input-view').style.display = 'none';
+        document.getElementById('result-view').style.display = 'block';
+    }
+
+    function shareReceipt() {
+        const btn = document.querySelector('.btn-share');
+        btn.innerText = "Generating...";
+        
+        html2canvas(document.getElementById('receipt-box'), { scale: 2 }).then(canvas => {
+            // Get the image as a Base64 string
+            const base64Data = canvas.toDataURL("image/png");
+            
+            // Check if we are inside the Android App
+            if (window.AndroidShareHandler) {
+                // Call the Java function
+                window.AndroidShareHandler.shareImage(base64Data);
+                btn.innerText = "📲 Share via WhatsApp/Email";
+            } else {
+                // Fallback for Desktop Testing
+                alert("This feature only works inside the Android App.\n(On desktop, right click image to save)");
+                console.log(base64Data);
+                btn.innerText = "📲 Share via WhatsApp/Email";
+            }
+        });
+    }
+</script>
+</body>
+</html>
